@@ -4,12 +4,12 @@
 
 #define setbit(port, bit)   \
 do {                        \
-    port |= (1<<(bit));     \
+    port |= (1UL<<(bit));     \
 } while (0)
 
 #define clearbit(port, bit) \
 do {                        \
-    port &= ~(1<<(bit));    \
+    port &= ~(1UL<<(bit));    \
 } while (0)
 
 void hw_mirror_step(void)
@@ -63,7 +63,7 @@ void hw_x_set_dir(int dir)
 
 void hw_clear_x_step(void)
 {
-    clearbit(TABLE_PORT, TABLE_STEP_PIN);
+    clearbit(X_PORT, X_STEP_PIN);
 }
 
 void hw_enable(bool en)
@@ -86,4 +86,5 @@ void hw_setup(void)
     setbit(TABLE_DDR, TABLE_DIR_PIN);
 
     setbit(EN_DDR, EN_PIN);
+    setbit(EN_PORT, EN_PIN);
 }

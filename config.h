@@ -39,9 +39,9 @@
 #define X_STEP_PIN 2
 #define X_DIR_PIN  5
 
-#define EN_PORT PORTD
-#define EN_DDR  DDRD
-#define EN_PIN 8
+#define EN_PORT PORTB
+#define EN_DDR  DDRB
+#define EN_PIN 0
 
 // Serial
 #define BAUD 9600UL

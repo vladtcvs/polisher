@@ -82,6 +82,10 @@ void core_set_amplitude_single(float ampl)
 void core_setup(void)
 {
     x_steps = 0;
+    X_AMPL_1 = 0;
+    X_AMPL_2 = 0;
+    core_calculate_parameters();
+    hw_x_set_dir(1);
     x_dir = 1;
     x_timer = 0;
     state = CORE_STATE_INIT;
@@ -95,6 +99,7 @@ void core_run(void)
     hw_enable(true);
     state = CORE_STATE_RUN;
     x_dir = 1;
+    hw_x_set_dir(1);
 }
 
 void core_stop(void)
@@ -113,6 +118,7 @@ void core_finish(void)
     } else {
         print_str("finished\r\n");
         state = CORE_STATE_IDLE;
+        hw_enable(false);
     }
 }
 
@@ -125,6 +131,7 @@ void core_make_x_step(void)
     if (state == CORE_STATE_FINISHING && x_steps == 0) {
         print_str("finished\r\n");
         state = CORE_STATE_IDLE;
+        hw_enable(false);
         return;
     }
 
