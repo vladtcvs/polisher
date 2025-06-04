@@ -3,6 +3,7 @@
 #include "config.h"
 #include "hw.h"
 #include "print.h"
+#include "core.h"
 
 #define max(a,b) ((a) > (b) ? (a) : (b))
 
@@ -91,6 +92,11 @@ void core_set_amplitude_single(float ampl)
 {
     core_set_amplitude_1(ampl);
     core_set_amplitude_2(0);
+}
+
+void core_set_x_speed(float speed)
+{
+    X_SPEED = speed;
 }
 
 // State functions
@@ -217,4 +223,15 @@ void core_loop(int delay_us)
     {
         hw_clear_table_step();
     }
+}
+
+bool core_is_running(void)
+{
+    return (state == CORE_STATE_RUN) || (CORE_STATE_FINISHING);
+}
+
+void core_get_ampl(int *ap, int *am)
+{
+    *ap = X_AMPL_1;
+    *am = X_AMPL_2;    
 }

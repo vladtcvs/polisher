@@ -21,11 +21,23 @@ void cmd_setup(void)
 void cmd_process(const char *cmd)
 {
     if (cmd[0] == 'F') {
+        if (!core_is_running()) {
+            print_str("Not running\n");
+            return;
+        }
         core_finish();
     } else if (cmd[0] == 'S') {
+        if (core_is_running()) {
+            print_str("Already running\n");
+            return;
+        }
         core_calculate_parameters();
         core_run();
     } else if (cmd[0] == 'A') {
+        if (core_is_running()) {
+            print_str("Stop first\n");
+            return;
+        }
         int ampl = -1;
         sscanf(cmd+1, "%d", &ampl);
         if (ampl < 0) {
@@ -36,6 +48,10 @@ void cmd_process(const char *cmd)
         }
         core_set_amplitude_symmetric(ampl);
     } else if (cmd[0] == 'B') {
+        if (core_is_running()) {
+            print_str("Stop first\n");
+            return;
+        }
         int ampl = -1;
         sscanf(cmd+1, "%d", &ampl);
         if (ampl < 0) {
@@ -45,6 +61,27 @@ void cmd_process(const char *cmd)
             return;
         }
         core_set_amplitude_single(ampl);
+    } else if (cmd[0] == 'X') {
+        if (core_is_running()) {
+            print_str("Stop first\n");
+            return;
+        }
+        int speed = -1;
+        sscanf(cmd+1, "%d", &speed);
+        if (speed < 0) {
+            print_str("Bad speed: ");
+            print_str(cmd);
+            print_str("\r\n");
+            return;
+        }
+        core_set_x_speed(speed);
+    } else if (cmd[0] == 'P') {
+        char buf[16] = {0};
+        int ap;
+        int am;
+        core_get_ampl(&ap, &am);
+        snprintf(buf, 15, "A=%i %i\n", ap, am);
+        print_str(buf);
     }
 }
 
