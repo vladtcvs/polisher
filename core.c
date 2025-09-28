@@ -24,6 +24,19 @@ static int32_t x_steps_1;
 static int32_t x_steps_2;
 static uint32_t x_delay_us;
 
+// Spray parameters
+static unsigned spray_timer;
+
+static uint16_t spray_steps;
+static uint16_t spray_steps_run;
+static uint16_t spray_steps_refill;
+
+static uint16_t spray_cycles_counter;
+static uint16_t spray_cycles;
+
+static uint16_t spray_refill_counter;
+static uint16_t spray_refill_cycles;
+
 // State
 int32_t x_steps; // Current position
 int x_dir;   // Current direction of move
@@ -40,6 +53,15 @@ enum core_state_e
     CORE_STATE_FINISHING,
     CORE_STATE_STOP,
 } state;
+
+enum core_spray_state_e {
+    CORE_SPRAY_STATE_IDLE = 0,
+    CORE_SPRAY_STATE_RUN,
+    CORE_SPRAY_STATE_REFILL,
+} spray_state;
+
+
+void core_spray_start_refill(void);
 
 // Config functiions
 void core_calculate_parameters(void)
@@ -70,6 +92,9 @@ void core_calculate_parameters(void)
     mirror_delay_us = max(1e6 * mirror_period / mirror_steps_per_rot, 1);
     mirror_timer = 0;
     hw_mirror_set_dir(MIRROR_DIR);
+
+    // spray parameters
+    spray_refill_cycles = spray_steps_refill / spray_steps_run;
 }
 
 void core_set_amplitude_1(float ampl)
@@ -103,13 +128,26 @@ void core_set_x_speed(float speed)
 void core_setup(void)
 {
     x_steps = 0;
-    X_AMPL_1 = 0;
-    X_AMPL_2 = 0;
+    X_AMPL_1 = 50;
+    X_AMPL_2 = 50;
     core_calculate_parameters();
     hw_x_set_dir(1);
     x_dir = 1;
     x_timer = 0;
+
+    spray_steps = 0;
+    spray_steps_run = 25;
+    spray_steps_refill = 8000;
+
+    // drop on each side turn
+    spray_cycles = 10;
+    spray_cycles_counter = 0;
+
+    // refill after 50 drops
+    spray_refill_counter = 0;
+
     state = CORE_STATE_INIT;
+    spray_state = CORE_SPRAY_STATE_IDLE;
 }
 
 void core_run(void)
@@ -119,18 +157,25 @@ void core_run(void)
     print_str("run\r\n");
     hw_enable(true);
     state = CORE_STATE_RUN;
+    spray_state = CORE_SPRAY_STATE_REFILL;
+    core_spray_start_refill();
+    spray_timer = 0;
+    spray_steps = 0;
+    spray_cycles_counter = 0;
     x_dir = 1;
     hw_x_set_dir(1);
 }
 
 void core_stop(void)
 {
+    spray_state = CORE_SPRAY_STATE_IDLE;
     state = CORE_STATE_STOP;
     hw_enable(false);
 }
 
 void core_finish(void)
 {
+    hw_spray_stop();
     if (state != CORE_STATE_RUN)
         return;
     if (x_steps != 0) {
@@ -140,6 +185,82 @@ void core_finish(void)
         print_str("finished\r\n");
         state = CORE_STATE_IDLE;
         hw_enable(false);
+    }
+}
+
+void core_spray_start_refill(void)
+{
+    print_str("spray refill\r\n");
+    spray_steps = 0;
+    spray_state = CORE_SPRAY_STATE_REFILL;
+    hw_spray_start_refill();
+}
+
+void core_spray_run(void)
+{
+    switch (spray_state) {
+    case CORE_SPRAY_STATE_REFILL:
+        break;
+    case CORE_SPRAY_STATE_RUN:
+        break;
+    case CORE_SPRAY_STATE_IDLE:
+        print_str("spray\r\n");
+        spray_steps = 0;
+        spray_state = CORE_SPRAY_STATE_RUN;
+        hw_spray_start_run();
+        break;
+    }
+}
+
+void core_spray_handle_side(void)
+{
+    switch (spray_state) {
+    case CORE_SPRAY_STATE_REFILL:
+        break;
+    case CORE_SPRAY_STATE_RUN:
+        break;
+    case CORE_SPRAY_STATE_IDLE:
+        spray_cycles_counter++;
+        if (spray_cycles_counter >= spray_cycles) {
+            spray_cycles_counter = 0;
+            core_spray_run();
+        }
+        break;
+    }
+}
+
+void core_spray_step(void)
+{
+    switch (spray_state) {
+    case CORE_SPRAY_STATE_REFILL:
+        if (hw_spray_endstop() == true)
+        {
+            print_str("spray refill complete\r\n");
+            hw_spray_stop();
+            spray_state = CORE_SPRAY_STATE_IDLE;
+            spray_steps = 0;
+            spray_cycles_counter = 0;
+            spray_refill_counter = 0;
+        } else {
+            spray_steps++;
+        }
+        break;
+    case CORE_SPRAY_STATE_RUN:
+        if (spray_steps >= spray_steps_run)
+        {
+            hw_spray_stop();
+            spray_state = CORE_SPRAY_STATE_IDLE;
+            spray_steps = 0;
+            spray_refill_counter++;
+            if (spray_refill_counter == spray_refill_cycles) {
+                core_spray_start_refill();
+            }
+        } else {
+            spray_steps++;
+        }
+        break;
+    case CORE_SPRAY_STATE_IDLE:
+        break;
     }
 }
 
@@ -163,6 +284,7 @@ void core_make_x_step(void)
         {
             if (x_steps >= x_steps_1)
             {
+                core_spray_handle_side();
                 x_dir = -1;
                 hw_x_set_dir(-1);
             }
@@ -223,11 +345,17 @@ void core_loop(int delay_us)
     {
         hw_clear_table_step();
     }
+
+    spray_timer += delay_us;
+    if (spray_timer > 1000) {
+        core_spray_step();
+        spray_timer = 0;
+    }
 }
 
 bool core_is_running(void)
 {
-    return (state == CORE_STATE_RUN) || (CORE_STATE_FINISHING);
+    return (state == CORE_STATE_RUN) || (state == CORE_STATE_FINISHING);
 }
 
 void core_get_ampl(int *ap, int *am)
@@ -235,3 +363,4 @@ void core_get_ampl(int *ap, int *am)
     *ap = X_AMPL_1;
     *am = X_AMPL_2;    
 }
+

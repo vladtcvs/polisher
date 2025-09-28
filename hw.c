@@ -12,6 +12,8 @@ do {                        \
     port &= ~(1UL<<(bit));    \
 } while (0)
 
+#define getbit(pin, bit) (!!(pin & (1UL << (bit))))
+
 void hw_mirror_step(void)
 {
     setbit(MIRROR_PORT, MIRROR_STEP_PIN);
@@ -87,4 +89,35 @@ void hw_setup(void)
 
     setbit(EN_DDR, EN_PIN);
     setbit(EN_PORT, EN_PIN);
+
+    setbit(SPRAY_REFILL_PORT, SPRAY_REFILL_PIN);
+    setbit(SPRAY_RUN_PORT, SPRAY_RUN_PIN);
+    setbit(SPRAY_ENDSTOP_PORT, SPRAY_ENDSTOP_BIT);
+
+    setbit(SPRAY_REFILL_DDR, SPRAY_REFILL_PIN);
+    setbit(SPRAY_RUN_DDR, SPRAY_RUN_PIN);
+    clearbit(SPRAY_ENDSTOP_DDR, SPRAY_ENDSTOP_BIT);
+}
+
+void hw_spray_start_run(void)
+{
+    setbit(SPRAY_REFILL_PORT, SPRAY_REFILL_PIN);
+    clearbit(SPRAY_RUN_PORT, SPRAY_RUN_PIN);
+}
+
+void hw_spray_start_refill(void)
+{
+    clearbit(SPRAY_REFILL_PORT, SPRAY_REFILL_PIN);
+    setbit(SPRAY_RUN_PORT, SPRAY_RUN_PIN);
+}
+
+void hw_spray_stop(void)
+{
+    setbit(SPRAY_REFILL_PORT, SPRAY_REFILL_PIN);
+    setbit(SPRAY_RUN_PORT, SPRAY_RUN_PIN);
+}
+
+bool hw_spray_endstop(void)
+{
+    return !getbit(SPRAY_ENDSTOP_PIN, SPRAY_ENDSTOP_BIT);
 }

@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-static char sendbuf[24];
+static char sendbuf[64];
 static uint8_t pos_send;
 static uint8_t pos_write;
 static uint8_t send_len;
@@ -33,6 +33,23 @@ void print_str(const char *s)
     }
 }
 
+void print_char(char c)
+{
+    if (send_len < sizeof(sendbuf)) {
+        sendbuf[pos_write++] = c;
+        pos_write = (pos_write + 1) % sizeof(sendbuf);
+        send_len++;
+        
+    }
+    if (!run) {
+        send_char(sendbuf[pos_send]);
+        pos_send = (pos_send + 1) % sizeof(sendbuf);
+        send_len--;
+        run = true;
+    }
+
+}
+
 static void print_onsend()
 {
     if (send_len > 0) {
@@ -54,5 +71,6 @@ void print_setup(void)
 
 ISR(USART_TX_vect)
 {
-	print_onsend();
+    print_onsend();
 }
+

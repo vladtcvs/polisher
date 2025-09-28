@@ -22,20 +22,20 @@ void cmd_process(const char *cmd)
 {
     if (cmd[0] == 'F') {
         if (!core_is_running()) {
-            print_str("Not running\n");
+            print_str("Not running\r\n");
             return;
         }
         core_finish();
     } else if (cmd[0] == 'S') {
         if (core_is_running()) {
-            print_str("Already running\n");
+            print_str("Already running\r\n");
             return;
         }
         core_calculate_parameters();
         core_run();
     } else if (cmd[0] == 'A') {
         if (core_is_running()) {
-            print_str("Stop first\n");
+            print_str("Stop first\r\n");
             return;
         }
         int ampl = -1;
@@ -49,7 +49,7 @@ void cmd_process(const char *cmd)
         core_set_amplitude_symmetric(ampl);
     } else if (cmd[0] == 'B') {
         if (core_is_running()) {
-            print_str("Stop first\n");
+            print_str("Stop first\r\n");
             return;
         }
         int ampl = -1;
@@ -63,7 +63,7 @@ void cmd_process(const char *cmd)
         core_set_amplitude_single(ampl);
     } else if (cmd[0] == 'X') {
         if (core_is_running()) {
-            print_str("Stop first\n");
+            print_str("Stop first\r\n");
             return;
         }
         int speed = -1;
@@ -80,7 +80,7 @@ void cmd_process(const char *cmd)
         int ap;
         int am;
         core_get_ampl(&ap, &am);
-        snprintf(buf, 15, "A=%i %i\n", ap, am);
+        snprintf(buf, 15, "A=%i %i\r\n", ap, am);
         print_str(buf);
     }
 }
@@ -98,3 +98,4 @@ void cmd_handle(char c)
             buf[len++] = c;
     }
 }
+

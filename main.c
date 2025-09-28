@@ -27,7 +27,7 @@ void setup() {
 
 ISR(USART_RX_vect)
 {
-	char c = UDR0;
+    char c = UDR0;
     cmd_handle(c);
 }
 
