@@ -36,7 +36,7 @@ int main(void)
     setup();
     sei();
 
-    print_str("init\n\r");
+    print_str("init\n\r> ");
     while (true) {
         core_loop(10);
         _delay_us(10);

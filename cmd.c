@@ -89,13 +89,19 @@ void cmd_handle(char c)
 {
     if (c == '\n' || c == '\r') {
         if (len > 0) {
+            print_str("\n\r");
             cmd_process(buf);
             memset(buf, 0, sizeof(buf));
+            print_str("\n\r> ");
             len = 0;
         }
     } else {
-        if (len < sizeof(buf)-1)
+        if (len < sizeof(buf)-1) {
+            char bb[2];
+            bb[0] = c;
+            bb[1] = 0;
+            print_str(bb);
             buf[len++] = c;
+        }
     }
 }
-

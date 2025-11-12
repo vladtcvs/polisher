@@ -3,11 +3,19 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 
-static char sendbuf[64];
+#define BUFLEN 32
+#define NUMBUF 4
+
+static char sendbuf[NUMBUF][BUFLEN];
+static uint8_t length[NUMBUF];
+static uint8_t buf_send;
+static uint8_t buf_write;
+static uint8_t buf_used;
+
 static uint8_t pos_send;
-static uint8_t pos_write;
-static uint8_t send_len;
+
 static bool run;
 
 static void send_char(char c)
@@ -15,47 +23,58 @@ static void send_char(char c)
     UDR0 = c;
 }
 
+static int get_next_char(void)
+{
+    while (buf_used > 0)
+    {
+        if (pos_send == length[buf_send]) {
+            buf_send = (buf_send + 1) % NUMBUF;
+            buf_used--;
+            pos_send = 0;
+            continue;
+        }
+
+        int c = sendbuf[buf_send][pos_send++];
+        if (pos_send == length[buf_send]) {
+            buf_send = (buf_send + 1) % NUMBUF;
+            buf_used--;
+            pos_send = 0;
+        }
+        return c;
+    }
+    return -1;
+}
+
 void print_str(const char *s)
 {
     if (*s == 0)
         return;
 
-    while (*s != 0 && send_len < sizeof(sendbuf)) {
-        sendbuf[pos_write] = *(s++);
-        pos_write = (pos_write + 1) % sizeof(sendbuf);
-        send_len++;
-    }
+    if (buf_used == NUMBUF)
+        return;
+
+    size_t len = strlen(s);
+    if (len > BUFLEN)
+        len = BUFLEN;
+    memcpy(sendbuf[buf_write], s, len);
+    length[buf_write] = len;
+    buf_used++;
+    buf_write = (buf_write + 1) % NUMBUF;
+
     if (!run) {
-        send_char(sendbuf[pos_send]);
-        pos_send = (pos_send + 1) % sizeof(sendbuf);
-        send_len--;
-        run = true;
+        int c = get_next_char();
+        if (c != -1) {
+            run = true;
+            send_char(c);
+        }
     }
 }
 
-void print_char(char c)
+static void print_onsend(void)
 {
-    if (send_len < sizeof(sendbuf)) {
-        sendbuf[pos_write++] = c;
-        pos_write = (pos_write + 1) % sizeof(sendbuf);
-        send_len++;
-        
-    }
-    if (!run) {
-        send_char(sendbuf[pos_send]);
-        pos_send = (pos_send + 1) % sizeof(sendbuf);
-        send_len--;
-        run = true;
-    }
-
-}
-
-static void print_onsend()
-{
-    if (send_len > 0) {
-        send_char(sendbuf[pos_send]);
-        pos_send = (pos_send + 1) % sizeof(sendbuf);
-        send_len--;
+    int c = get_next_char();
+    if (c != -1) {
+        send_char(c);
     } else {
         run = false;
     }
@@ -63,9 +82,10 @@ static void print_onsend()
 
 void print_setup(void)
 {
-    send_len = 0;
     pos_send = 0;
-    pos_write = 0;
+    buf_send = 0;
+    buf_write = 0;
+    buf_used = 0;
     run = false;
 }
 
@@ -73,4 +93,3 @@ ISR(USART_TX_vect)
 {
     print_onsend();
 }
-
